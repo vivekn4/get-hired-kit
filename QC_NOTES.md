@@ -2,7 +2,7 @@
 
 Tested 2026-10-11 by Squirt (subagent) before handoff. **No real Gemini key and no real user data were used** — AI paths tested in training-dummy mode; the license key used was freshly generated for the test.
 
-## Unit tests — 21/21 pass (`npm test`)
+## Unit tests — 22/22 pass (`npm test`)
 
 `test/logic.test.mjs` covers the pure logic:
 - License: key generation shape, 25/25 generated keys verify, tampered key fails checksum, garbage rejected, lowercase/missing-prefix tolerated, pro-cookie HMAC sign/verify roundtrip (forged cookie rejected)
