@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<!-- Crafted by Vivek Nair (VN) — https://github.com/vivekn4 -->
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>VN Get Hired Kit — Interview Dojo · Resume Roaster · Job Tracker</title>
+<meta name="description" content="Train like a fighter, roast your resume, track every application. VN's career dojo — 3 AI generations/day free, Pro $29 one-time.">
+<link rel="icon" type="image/svg+xml" href="favicon.svg">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body class="theme-dojo" data-view="landing">
+<canvas id="fxCanvas" aria-hidden="true"></canvas>
+
+<header id="siteHeader">
+  <div class="vn-logo" aria-label="VN Get Hired Kit">
+    <span class="vn-mark">VN</span>
+    <span class="vn-name">GET HIRED KIT</span>
+  </div>
+  <div class="header-actions">
+    <span id="quotaPill" class="quota-pill" title="AI generations left today">⚡ <b id="quotaCount">…</b></span>
+    <button id="proBtn" class="btn btn-gold btn-sm">👑 GO PRO</button>
+    <button id="muteBtn" class="btn btn-ghost btn-sm" aria-label="Toggle sound">🔊</button>
+  </div>
+</header>
+
+<nav id="tabBar" aria-label="Modules">
+  <button id="tabDojo" class="tab active" data-theme="theme-dojo" data-view="dojo">🥋 DOJO</button>
+  <button id="tabRoaster" class="tab" data-theme="theme-roaster" data-view="roaster">🔥 ROASTER</button>
+  <button id="tabTracker" class="tab" data-theme="theme-tracker" data-view="tracker">📡 TRACKER</button>
+</nav>
+
+<main id="app">
+
+  <!-- LANDING -->
+  <section id="view-landing" class="view">
+    <h1 class="hero-title">TRAIN. <span class="hl-red">FIGHT.</span> <span class="hl-gold">GET HIRED.</span></h1>
+    <p class="hero-sub">Three arcade cabinets. One career. Pick your machine.</p>
+    <div class="module-grid">
+      <button class="module-card mod-dojo" data-goto="dojo">
+        <span class="mod-emoji">🥋</span>
+        <span class="mod-title">INTERVIEW DOJO</span>
+        <span class="mod-desc">Spar 5 rounds against an AI hiring manager. Get scored. Earn your belt.</span>
+      </button>
+      <button class="module-card mod-roaster" data-goto="roaster">
+        <span class="mod-emoji">🔥</span>
+        <span class="mod-title">RESUME ROASTER</span>
+        <span class="mod-desc">A savage-but-fair roast, then a one-click professional rewrite.</span>
+      </button>
+      <button class="module-card mod-tracker" data-goto="tracker">
+        <span class="mod-emoji">📡</span>
+        <span class="mod-title">JOB TRACKER</span>
+        <span class="mod-desc">Kanban board, follow-up radar, stats. Free forever, no account.</span>
+      </button>
+    </div>
+    <button id="btnEnterDojo" class="btn btn-big btn-red">ENTER THE DOJO →</button>
+    <p class="fine-print">3 AI generations/day free · Job Tracker always free · <b>Pro $29 one-time</b> = unlimited</p>
+  </section>
+
+  <!-- INTERVIEW DOJO -->
+  <section id="view-dojo" class="view hidden">
+    <div id="dojoSetup" class="panel">
+      <h2>🥋 INTERVIEW DOJO</h2>
+      <p class="panel-sub">Paste the job description. The sensei asks 5 questions. You answer. You get judged.</p>
+      <label class="field-label" for="roleInput">Role title <span class="opt">(optional)</span></label>
+      <input id="roleInput" class="input" type="text" maxlength="120" placeholder="e.g. Retail Sales Associate">
+      <label class="field-label" for="jdInput">Job description</label>
+      <textarea id="jdInput" class="input textarea" rows="7" maxlength="4000" placeholder="Paste the job posting here…"></textarea>
+      <button id="btnStartSparring" class="btn btn-big btn-red">🔔 START SPARRING</button>
+      <p class="token-note">Costs 1 ⚡ training token · <b id="dojoTokens">…</b> left today</p>
+    </div>
+
+    <div id="dojoFight" class="panel hidden">
+      <div class="fight-top">
+        <span id="roundLabel" class="round-label">ROUND 1/5</span>
+        <span id="beltLabel" class="belt-label">🥋 white belt pace</span>
+      </div>
+      <div id="beltBarWrap" class="belt-bar-wrap"><div id="beltBar" class="belt-bar"></div></div>
+      <div id="questionCard" class="question-card"></div>
+      <label class="field-label" for="answerInput">Your answer</label>
+      <textarea id="answerInput" class="input textarea" rows="5" maxlength="3000" placeholder="Answer like you mean the job…"></textarea>
+      <button id="btnSubmitAnswer" class="btn btn-big btn-gold">⚔️ SUBMIT ANSWER</button>
+      <div id="scoreFlash" class="score-flash hidden"></div>
+      <div id="feedbackBox" class="feedback-box hidden"></div>
+    </div>
+
+    <div id="dojoReport" class="panel hidden">
+      <h2>🏁 FIGHT REPORT</h2>
+      <div id="reportBelt" class="report-belt"></div>
+      <div id="reportAvg" class="report-avg"></div>
+      <div id="reportRounds" class="report-rounds"></div>
+      <button id="btnRematch" class="btn btn-big btn-red">🔁 REMATCH</button>
+    </div>
+  </section>
+
+  <!-- RESUME ROASTER -->
+  <section id="view-roaster" class="view hidden">
+    <div class="panel">
+      <h2>🔥 RESUME ROASTER</h2>
+      <p class="panel-sub">Paste your resume. Get roasted. Then get rebuilt.</p>
+      <label class="field-label" for="resumeInput">Your resume</label>
+      <textarea id="resumeInput" class="input textarea" rows="9" maxlength="8000" placeholder="Paste your resume text here…"></textarea>
+      <div class="btn-row">
+        <button id="btnRoast" class="btn btn-big btn-fire">🔥 ROAST ME</button>
+        <button id="btnRewrite" class="btn btn-big btn-gold">✨ REWRITE IT</button>
+      </div>
+      <p class="token-note">Each costs 1 ⚡ training token · <b id="roastTokens">…</b> left today</p>
+    </div>
+    <div id="roastOutput" class="panel output-panel hidden">
+      <h3>🔥 THE ROAST</h3>
+      <div id="roastText" class="roast-text"></div>
+    </div>
+    <div id="rewriteOutput" class="panel output-panel hidden">
+      <h3>✨ THE REBUILD <button id="btnCopyRewrite" class="btn btn-sm btn-ghost">📋 COPY</button></h3>
+      <div id="rewriteText" class="rewrite-text"></div>
+    </div>
+  </section>
+
+  <!-- JOB TRACKER -->
+  <section id="view-tracker" class="view hidden">
+    <div id="statsStrip" class="stats-strip">
+      <div class="stat"><span class="stat-num" id="statApplied">0</span><span class="stat-label">APPLIED</span></div>
+      <div class="stat"><span class="stat-num" id="statResponse">0%</span><span class="stat-label">RESPONSE</span></div>
+      <div class="stat"><span class="stat-num" id="statInterview">0</span><span class="stat-label">INTERVIEWS</span></div>
+      <div class="stat"><span class="stat-num" id="statOffer">0</span><span class="stat-label">OFFERS</span></div>
+    </div>
+    <div class="tracker-toolbar">
+      <button id="btnAddApp" class="btn btn-cyan">＋ ADD APPLICATION</button>
+      <button id="btnExport" class="btn btn-ghost btn-sm">⤓ EXPORT</button>
+      <button id="btnImport" class="btn btn-ghost btn-sm">⤒ IMPORT</button>
+      <input id="importFile" type="file" accept="application/json,.json" class="hidden">
+    </div>
+    <div id="kanban" class="kanban"></div>
+  </section>
+
+</main>
+
+<footer id="siteFooter">
+  <span class="vn-mark">VN</span> GET HIRED KIT v1.0 — crafted by <b>Vivek Nair</b> ·
+  <a href="https://github.com/vivekn4/get-hired-kit" target="_blank" rel="noopener">GitHub</a> ·
+  <span id="footQuota">⚡ <b id="footQuotaCount">…</b> tokens left</span>
+</footer>
+
+<!-- APPLICATION MODAL -->
+<div id="appModal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+  <div class="modal-box">
+    <h3 id="modalTitle">＋ New application</h3>
+    <label class="field-label" for="mCompany">Company *</label>
+    <input id="mCompany" class="input" type="text" maxlength="120">
+    <label class="field-label" for="mRole">Role *</label>
+    <input id="mRole" class="input" type="text" maxlength="120">
+    <div class="field-2col">
+      <div><label class="field-label" for="mStage">Stage</label>
+        <select id="mStage" class="input">
+          <option value="applied">Applied</option>
+          <option value="screening">Screening</option>
+          <option value="interview">Interview</option>
+          <option value="offer">Offer 🎉</option>
+          <option value="rejected">Rejected</option>
+        </select></div>
+      <div><label class="field-label" for="mDate">Date applied</label>
+        <input id="mDate" class="input" type="date"></div>
+    </div>
+    <label class="field-label" for="mFollowUp">Follow-up date</label>
+    <input id="mFollowUp" class="input" type="date">
+    <label class="field-label" for="mLink">Job link</label>
+    <input id="mLink" class="input" type="url" maxlength="300" placeholder="https://…">
+    <label class="field-label" for="mNotes">Notes</label>
+    <textarea id="mNotes" class="input textarea" rows="3" maxlength="2000"></textarea>
+    <div class="btn-row">
+      <button id="btnSaveApp" class="btn btn-cyan">💾 SAVE</button>
+      <button id="btnDeleteApp" class="btn btn-danger hidden">🗑 DELETE</button>
+      <button id="btnCloseModal" class="btn btn-ghost">CANCEL</button>
+    </div>
+  </div>
+</div>
+
+<!-- PRO MODAL -->
+<div id="proModal" class="modal hidden" role="dialog" aria-modal="true">
+  <div class="modal-box pro-box">
+    <h3>👑 GO PRO — $29 <span class="strike">$∞ of rejections</span></h3>
+    <p>One-time payment. <b>Unlimited</b> AI interviews, roasts & rewrites. Forever.</p>
+    <ul class="pro-perks">
+      <li>⚡ Unlimited training tokens</li>
+      <li>🥋 Unlimited sparring rounds</li>
+      <li>🔥 Unlimited roasts & rewrites</li>
+      <li>📡 Tracker stays free forever anyway</li>
+    </ul>
+    <a id="proGumroadLink" class="btn btn-big btn-gold" href="#" target="_blank" rel="noopener">💳 BUY PRO — $29</a>
+    <p class="or-divider">— already bought? enter your key —</p>
+    <input id="licenseKeyInput" class="input key-input" type="text" placeholder="GHK-XXXX-XXXX-XXXX" maxlength="18" autocomplete="off" spellcheck="false">
+    <button id="btnVerifyKey" class="btn btn-cyan">🔓 UNLOCK PRO</button>
+    <p id="proMessage" class="pro-message"></p>
+    <button id="btnClosePro" class="btn btn-ghost">not now</button>
+  </div>
+</div>
+
+<div id="toast" class="toast hidden"></div>
+
+<script src="js/app.js"></script>
+</body>
+</html>
