@@ -1,0 +1,21 @@
+# Deployed by Vivek Nair (VN)
+services:
+  - type: web
+    name: get-hired-kit
+    runtime: node
+    plan: free
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: NODE_VERSION
+        value: "20"
+      - key: GEMINI_API_KEY
+        sync: false # set in the Render dashboard — never commit it
+      - key: PRO_SECRET
+        sync: false # generate: openssl rand -hex 32 — set in Render dashboard
+      - key: GUMROAD_PRODUCT_URL
+        sync: false # your $29 Gumroad product URL
+      - key: TRUST_PROXY
+        value: "1"
+      - key: NODE_ENV
+        value: production
