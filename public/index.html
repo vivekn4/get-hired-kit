@@ -64,10 +64,17 @@
       <p class="panel-sub">Paste the job description. The sensei asks 5 questions. You answer. You get judged.</p>
       <label class="field-label" for="roleInput">Role title <span class="opt">(optional)</span></label>
       <input id="roleInput" class="input" type="text" maxlength="120" placeholder="e.g. Retail Sales Associate">
+      <label class="field-label" for="difficultyInput">Difficulty</label>
+      <select id="difficultyInput" class="input">
+        <option value="chill">Chill 🟢 — warm-up pace, generous scoring</option>
+        <option value="standard" selected>Standard 🟡 — real-interview pressure</option>
+        <option value="beast">Beast 🔴 — hostile follow-ups, harsh scoring</option>
+      </select>
       <label class="field-label" for="jdInput">Job description</label>
       <textarea id="jdInput" class="input textarea" rows="7" maxlength="4000" placeholder="Paste the job posting here…"></textarea>
       <button id="btnStartSparring" class="btn btn-big btn-red">🔔 START SPARRING</button>
       <p class="token-note">Costs 1 ⚡ training token · <b id="dojoTokens">…</b> left today</p>
+      <div id="dojoHistory" class="dojo-history"></div>
     </div>
 
     <div id="dojoFight" class="panel hidden">
@@ -100,11 +107,26 @@
       <p class="panel-sub">Paste your resume. Get roasted. Then get rebuilt.</p>
       <label class="field-label" for="resumeInput">Your resume</label>
       <textarea id="resumeInput" class="input textarea" rows="9" maxlength="8000" placeholder="Paste your resume text here…"></textarea>
+      <label class="field-label" for="atsJdInput">Target job description <span class="opt">(optional — powers the ATS check)</span></label>
+      <textarea id="atsJdInput" class="input textarea" rows="4" maxlength="4000" placeholder="Paste the job posting to check your resume against…"></textarea>
       <div class="btn-row">
         <button id="btnRoast" class="btn btn-big btn-fire">🔥 ROAST ME</button>
         <button id="btnRewrite" class="btn btn-big btn-gold">✨ REWRITE IT</button>
       </div>
       <p class="token-note">Each costs 1 ⚡ training token · <b id="roastTokens">…</b> left today</p>
+      <button id="btnAts" class="btn btn-big btn-ghost">🎯 ATS KEYWORD CHECK — FREE, NO TOKEN</button>
+    </div>
+    <div id="atsOutput" class="panel output-panel hidden">
+      <h3>🎯 ATS KEYWORD CHECK <span id="atsVerdict" class="ats-verdict"></span></h3>
+      <div id="atsScore" class="ats-score"></div>
+      <div id="atsSections" class="ats-sections"></div>
+      <div class="field-label">✅ Words the JD wants that ARE in your resume</div>
+      <div id="atsMatched" class="chip-row"></div>
+      <div class="field-label">❌ JD words MISSING from your resume</div>
+      <div id="atsMissing" class="chip-row"></div>
+      <div class="field-label">🛠 Fix list</div>
+      <ul id="atsSuggestions" class="ats-suggestions"></ul>
+    </div>
     </div>
     <div id="roastOutput" class="panel output-panel hidden">
       <h3>🔥 THE ROAST</h3>
@@ -123,9 +145,20 @@
       <div class="stat"><span class="stat-num" id="statResponse">0%</span><span class="stat-label">RESPONSE</span></div>
       <div class="stat"><span class="stat-num" id="statInterview">0</span><span class="stat-label">INTERVIEWS</span></div>
       <div class="stat"><span class="stat-num" id="statOffer">0</span><span class="stat-label">OFFERS</span></div>
+      <div class="stat"><span class="stat-num" id="statGhosted">0</span><span class="stat-label">👻 GHOSTED</span></div>
+      <div class="stat"><span class="stat-num" id="statDue">0</span><span class="stat-label">⏰ FOLLOW-UPS DUE</span></div>
     </div>
     <div class="tracker-toolbar">
       <button id="btnAddApp" class="btn btn-cyan">＋ ADD APPLICATION</button>
+      <input id="trackerSearch" class="input tracker-search" type="search" placeholder="🔍 Search company / role / notes…">
+      <select id="trackerStage" class="input tracker-stage">
+        <option value="all">All stages</option>
+        <option value="applied">Applied</option>
+        <option value="screening">Screening</option>
+        <option value="interview">Interview</option>
+        <option value="offer">Offer</option>
+        <option value="rejected">Rejected</option>
+      </select>
       <button id="btnExport" class="btn btn-ghost btn-sm">⤓ EXPORT</button>
       <button id="btnImport" class="btn btn-ghost btn-sm">⤒ IMPORT</button>
       <input id="importFile" type="file" accept="application/json,.json" class="hidden">
@@ -167,6 +200,7 @@
     <input id="mLink" class="input" type="url" maxlength="300" placeholder="https://…">
     <label class="field-label" for="mNotes">Notes</label>
     <textarea id="mNotes" class="input textarea" rows="3" maxlength="2000"></textarea>
+    <div id="appHistory" class="app-history"></div>
     <div class="btn-row">
       <button id="btnSaveApp" class="btn btn-cyan">💾 SAVE</button>
       <button id="btnDeleteApp" class="btn btn-danger hidden">🗑 DELETE</button>
@@ -197,6 +231,7 @@
 
 <div id="toast" class="toast hidden"></div>
 
+<script src="js/tracker_logic.js"></script>
 <script src="js/app.js"></script>
 </body>
 </html>

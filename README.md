@@ -10,6 +10,7 @@
 |---|---|
 | 🥋 **Interview Dojo** | Paste a job description → spar 5 rounds against an AI hiring manager → scored feedback + belt rank (White → Black) |
 | 🔥 **Resume Roaster** | Savage-but-fair roast of your resume, then a one-click professional rewrite |
+| 🎯 **ATS Keyword Check** | Deterministic JD-vs-resume keyword gap check (matched / missing / section + quantified-bullet signals) — free forever, costs **no** token |
 | 📡 **Job Tracker** | Kanban board (Applied → Screening → Interview → Offer / Rejected), follow-up radar, stats, JSON backup — free forever, no account |
 
 ![Get Hired Kit banner](assets/banner.jpg)
@@ -26,7 +27,8 @@ Crafted by **Vivek Nair (VN)** — https://github.com/vivekn4
 |---|---|
 | "AI interviewer" | Google Gemini (free tier) via its OpenAI-compatible endpoint. You bring your own free key. |
 | "Training-dummy mode" | No key / API down → built-in question bank + generic roasts. The app never hard-fails. |
-| "3 generations/day" | Soft quota per client (IP + user-agent hash), in-memory, resets daily. One interview = 1 token; roast = 1; rewrite = 1. Answers inside an interview ride free. |
+| "3 generations/day" | Soft quota per client (IP + user-agent hash), in-memory, resets daily. One interview = 1 token; roast = 1; rewrite = 1. Answers inside an interview ride free. **The ATS check is deterministic (no AI) and never costs a token.** |
+| "ATS score" | `POST /api/ats` compares JD terms (unigrams + within-clause bigrams) against the resume, plus section-heading + quantified-bullet signals. A sparring-partner signal, not a real ATS — real systems weigh formatting, file type, and recruiter behavior too. |
 | "Pro license" | Key format `GHK-XXXX-XXXX-XXXX` with checksum. v1 verifies the checksum offline (+ optional Gumroad sale lookup if you set `GUMROAD_ACCESS_TOKEN`). **Tradeoff:** a well-formed key unlocks Pro even without a purchase — the paywall is convenience + goodwill, not DRM. Key sharing is possible in v1. |
 | "Your data" | Resumes, JDs, and answers live in server memory only (sessions expire after 30 min) and are **never logged**. The tracker lives in *your* browser's localStorage — we never see it. |
 
@@ -79,6 +81,7 @@ Without a key the app runs in training-dummy mode — everything stays clickable
 | POST | `/api/interview/answer` | `{sessionId, answer}` → score + next question / final report |
 | POST | `/api/roast` | `{resume}` → roast text |
 | POST | `/api/rewrite` | `{resume, jobDescription?}` → rewritten resume |
+| POST | `/api/ats` | `{resume, jobDescription?}` → `{score, verdict, coverage, matched, missing, sections, metrics, suggestions}` — deterministic, **free, no token** |
 | POST | `/api/license/verify` | `{key}` → sets HMAC-signed Pro cookie |
 | GET | `/api/quota` | `{pro, remaining, daily}` |
 | GET | `/api/health` | service status |
@@ -89,6 +92,16 @@ Without a key the app runs in training-dummy mode — everything stays clickable
 - AI answers can be wrong or generic. It's a sparring partner, not a hiring manager.
 - The rewrite never invents employers or degrees — but always proofread before sending.
 - Render free tier sleeps when idle → first load can take ~30s.
+
+## v1.1 upgrades (2026-10-14 — teardown-inspired, all original code)
+
+Mechanisms were *learned* from studying three open-source apps (OpenResume, Jobify, Prepped — see QC_NOTES.md) and re-implemented from scratch. No code, strings, or assets were copied from any of them.
+
+1. **ATS Keyword Check** (`POST /api/ats`, `lib/ats.js`, Roaster panel) — deterministic JD-vs-resume gap analysis: unigram + within-clause bigram coverage, matched/missing chips, section-heading detection, quantified-bullet ratio, fix list. Free forever, no token.
+2. **Dojo difficulty** (Chill / Standard / Beast) — changes the question style, AI scoring strictness, and offline fallback base/cap. Stored per session.
+3. **Rubric-dimension scoring** — every answer now scores 5 dimensions (Structure, Real example, Metrics & proof, Role relevance, Punchy delivery) shown as bars per answer and in the final report. AI returns them as JSON (validated, offline recompute on bad data); the dummy fallback computes each from observable signals.
+4. **Tracker v2** — per-application activity history (auto-logged on create + every stage move, shown in the edit modal), search + stage filter, derived 👻 Ghosted badge (14+ days no movement in Applied/Screening — a *derived flag*, not a new stage), follow-up "due soon" (≤3 days) amber state, Ghosted + Follow-ups-due stats. v1 boards auto-migrate (history seeded with a `created` event). Export/import now version 2, history preserved.
+5. **Dojo history + streak** (localStorage) — last 5 bouts, consecutive-day streak, best score. Pure frontend, no server state.
 
 ## Dev plan & QC
 

@@ -225,12 +225,53 @@ body.shake { animation: shake 0.45s; }
 .rewrite-text { white-space: pre-wrap; font-size: 15px; line-height: 1.7; background: rgba(0,0,0,0.45); border-radius: 10px; padding: 16px; border: 1px dashed var(--neon2); }
 .output-panel { animation: pop 0.4s ease; }
 
+/* ---------- dojo history / streak ---------- */
+.dojo-history { margin-top: 16px; }
+.streak-chip {
+  display: inline-block; font-weight: 900; font-size: 14px; letter-spacing: 0.5px;
+  color: var(--neon2); border: 1px solid var(--neon2); border-radius: 999px;
+  padding: 6px 14px; margin-bottom: 8px; box-shadow: 0 0 12px color-mix(in srgb, var(--neon2) 45%, transparent);
+}
+.history-item {
+  display: flex; justify-content: space-between; gap: 10px;
+  font-size: 13px; color: var(--dim); padding: 5px 2px;
+  border-bottom: 1px dashed rgba(255,255,255,0.1);
+}
+.history-empty { font-size: 13px; color: var(--dim); }
+.app-history { margin-top: 14px; }
+
+/* ---------- rubric dimension bars ---------- */
+.dim-bars { margin-top: 10px; display: flex; flex-direction: column; gap: 6px; }
+.dim-row { display: grid; grid-template-columns: 110px 1fr 34px; gap: 8px; align-items: center; font-size: 12px; }
+.dim-label { color: var(--dim); font-weight: 700; }
+.dim-bar { height: 8px; background: rgba(0,0,0,0.6); border-radius: 999px; overflow: hidden; border: 1px solid rgba(255,255,255,0.12); }
+.dim-fill { height: 100%; border-radius: 999px; background: linear-gradient(90deg, var(--neon), var(--neon2)); }
+.dim-val { text-align: right; font-weight: 900; color: var(--neon2); }
+
+/* ---------- ATS check ---------- */
+.ats-score { font-size: 18px; margin-bottom: 10px; }
+.ats-score b { color: var(--neon2); font-size: 26px; }
+.ats-verdict { font-size: 13px; color: var(--neon2); border: 1px solid var(--neon2); border-radius: 999px; padding: 3px 10px; margin-left: 6px; white-space: nowrap; }
+.ats-sections { font-size: 13px; color: var(--dim); margin-bottom: 8px; line-height: 2.1; }
+.chip-row { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 6px; }
+.chip { font-size: 12px; font-weight: 700; padding: 4px 10px; border-radius: 999px; border: 1px solid rgba(255,255,255,0.2); }
+.chip-hit { color: #4ade80; border-color: #4ade80; background: rgba(74, 222, 128, 0.1); }
+.chip-miss { color: #ff5d5d; border-color: #ff5d5d; background: rgba(255, 93, 93, 0.1); }
+.ats-suggestions { font-size: 14px; line-height: 1.65; margin: 4px 0 0; padding-left: 20px; }
+
 /* ---------- tracker ---------- */
-.stats-strip { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 14px; }
+.stats-strip { display: grid; grid-template-columns: repeat(6, 1fr); gap: 10px; margin-bottom: 14px; }
 .stat { background: var(--card); border: 1px solid var(--card-border); border-radius: 12px; padding: 12px 6px; text-align: center; }
 .stat-num { display: block; font-size: 24px; font-weight: 900; color: var(--neon2); text-shadow: 0 0 12px var(--neon2); }
 .stat-label { font-size: 11px; letter-spacing: 1.5px; color: var(--dim); }
 .tracker-toolbar { display: flex; gap: 8px; margin-bottom: 14px; flex-wrap: wrap; }
+.tracker-search { flex: 1 1 180px; min-width: 160px; }
+.tracker-stage { flex: 0 1 160px; }
+.kcard .kd.due-soon { color: #ffb300; font-weight: 800; }
+.ghost-badge {
+  font-size: 11px; font-weight: 900; color: #c4b5fd; border: 1px solid #8b5cf6;
+  border-radius: 999px; padding: 1px 8px; white-space: nowrap;
+}
 .kanban { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 12px; }
 .kcol { background: rgba(0,0,0,0.4); border: 1px solid color-mix(in srgb, var(--neon) 40%, transparent); border-radius: 12px; padding: 10px; min-height: 120px; }
 .kcol h4 { margin: 4px 4px 10px; font-size: 13px; letter-spacing: 1.5px; color: var(--neon); display: flex; justify-content: space-between; }
@@ -283,4 +324,6 @@ body.shake { animation: shake 0.45s; }
   .field-2col { grid-template-columns: 1fr; }
   .btn-row .btn { min-width: 100%; }
   .vn-name { display: none; }
+  .stats-strip { grid-template-columns: repeat(3, 1fr); }
+  .dim-row { grid-template-columns: 90px 1fr 30px; }
 }

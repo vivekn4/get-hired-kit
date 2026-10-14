@@ -269,7 +269,48 @@ $("muteBtn").addEventListener("click", () => {
   if (!muted) SFX.blip();
 });
 
-/* ============================== INTERVIEW DOJO ============================== */
+/* ============================== DOJO HISTORY + STREAK ============================== */
+const DOJO_HISTORY_KEY = "ghk_dojo_history_v1";
+
+function loadDojoHistory() {
+  try {
+    const raw = localStorage.getItem(DOJO_HISTORY_KEY);
+    if (!raw) return [];
+    const data = JSON.parse(raw);
+    return Array.isArray(data) ? data.filter((b) => b && typeof b.avg === "number") : [];
+  } catch { return []; }
+}
+
+function saveDojoBout(bout) {
+  const h = loadDojoHistory();
+  h.unshift({ ...bout, date: new Date().toISOString().slice(0, 10) });
+  try { localStorage.setItem(DOJO_HISTORY_KEY, JSON.stringify(h.slice(0, 50))); } catch { /* storage full */ }
+}
+
+function renderDojoHistory() {
+  const el = $("dojoHistory");
+  const h = loadDojoHistory();
+  if (!h.length) {
+    el.innerHTML = `<div class="history-empty">No sparring bouts yet. Your first belt is one fight away.</div>`;
+    return;
+  }
+  const streak = GHKTracker.streakDays(h);
+  const best = h.reduce((m, b) => Math.max(m, b.avg), 0);
+  const rows = h.slice(0, 5).map((b) =>
+    `<div class="history-item"><span>${esc(b.date)}</span><span>${esc(b.belt || "?")} belt</span><b>${b.avg}/100</b></div>`
+  ).join("");
+  el.innerHTML = `<div class="streak-chip">🔥 ${streak}-day streak · ${h.length} bouts · best ${best}/100</div>${rows}`;
+}
+
+/** Rubric dimension bars (shared by per-answer feedback + final report). */
+function dimBarsHTML(dimensions) {
+  if (!dimensions) return "";
+  const labels = { structure: "Structure", example: "Real example", metrics: "Metrics & proof", relevance: "Role relevance", punch: "Punchy delivery" };
+  return `<div class="dim-bars">${Object.entries(dimensions).map(([k, v]) => `
+    <div class="dim-row"><span class="dim-label">${labels[k] || k}</span>
+    <div class="dim-bar"><div class="dim-fill" style="width:${Math.max(0, Math.min(100, v))}%"></div></div>
+    <span class="dim-val">${v}</span></div>`).join("")}</div>`;
+}
 let dojoSession = null;
 let dojoScores = [];
 
@@ -280,7 +321,7 @@ $("btnStartSparring").addEventListener("click", async () => {
   const btn = $("btnStartSparring");
   btn.disabled = true; btn.textContent = "🥋 BOWING IN…";
   try {
-    const r = await api("/api/interview/start", { jobDescription: jd, role });
+    const r = await api("/api/interview/start", { jobDescription: jd, role, difficulty: $("difficultyInput").value });
     dojoSession = r.sessionId; dojoScores = [];
     $("dojoSetup").classList.add("hidden");
     $("dojoFight").classList.remove("hidden");
@@ -319,7 +360,7 @@ $("btnSubmitAnswer").addEventListener("click", async () => {
     sf.classList.remove("hidden");
     await countUp(sf, r.score);
     const fb = $("feedbackBox");
-    fb.innerHTML = `<b>Coach:</b> ${esc(r.feedback)}<br><b>💪 Strength:</b> ${esc(r.strength)}<br><b>🎯 Fix:</b> ${esc(r.fix)}${r.dummy ? '<br><span style="opacity:.6">🤖 training-dummy scoring</span>' : ""}`;
+    fb.innerHTML = `<b>Coach:</b> ${esc(r.feedback)}<br><b>💪 Strength:</b> ${esc(r.strength)}<br><b>🎯 Fix:</b> ${esc(r.fix)}${r.dummy ? '<br><span style="opacity:.6">🤖 training-dummy scoring</span>' : ""}${dimBarsHTML(r.dimensions)}`;
     fb.classList.remove("hidden");
     if (r.score >= 80) SFX.cheer();
     else if (r.score < 50) { SFX.trombone(); VFX.shake(); }
@@ -342,7 +383,10 @@ function showReport(report) {
       <div class="rq">R${i + 1}: ${esc(x.question)}</div>
       <div class="rs">${x.score}/100</div>
       <div>${esc(x.feedback)}</div>
+      ${dimBarsHTML(x.dimensions)}
     </div>`).join("");
+  saveDojoBout({ avg: report.average, belt: report.belt, rounds: report.rounds.length });
+  renderDojoHistory();
   if (report.belt === "Black") { SFX.fanfare(); VFX.confettiBurst(120); toast("👑 BLACK BELT. The dojo bows to you."); }
   else if (report.average >= 65) { SFX.cheer(); VFX.confettiBurst(50); }
   else { SFX.trombone(); }
@@ -397,6 +441,34 @@ $("btnCopyRewrite").addEventListener("click", async () => {
   } catch { toast("Copy failed — select the text manually."); }
 });
 
+/* ============================== ATS KEYWORD CHECK (free, no token) ============================== */
+$("btnAts").addEventListener("click", async () => {
+  const resume = $("resumeInput").value.trim();
+  if (resume.length < 50) { toast("Paste your resume (50+ characters) first."); SFX.trombone(); return; }
+  const btn = $("btnAts");
+  btn.disabled = true; btn.textContent = "🎯 SCANNING…";
+  try {
+    const r = await api("/api/ats", { resume, jobDescription: $("atsJdInput").value.trim() });
+    const out = $("atsOutput");
+    out.classList.remove("hidden");
+    $("atsVerdict").textContent = r.verdict;
+    $("atsScore").innerHTML = `ATS score: <b>${r.score}/100</b> · keyword coverage ${r.coverage}% · ${r.termsChecked} terms checked${r.usedGenericTerms ? " · <span style='opacity:.7'>(no JD pasted — checked against generic professional terms)</span>" : ""}`;
+    const secLabels = { summary: "Summary", experience: "Experience", education: "Education", skills: "Skills", projects: "Projects" };
+    $("atsSections").innerHTML = `Sections detected: ${Object.entries(secLabels).map(([k, l]) =>
+      `<span class="chip ${r.sections[k] ? "chip-hit" : "chip-miss"}">${r.sections[k] ? "✓" : "✗"} ${l}</span>`).join("")} · ${r.metrics.wordCount} words · ${r.metrics.quantifiedBullets}/${r.metrics.bullets} quantified bullets`;
+    $("atsMatched").innerHTML = r.matched.length
+      ? r.matched.map((m) => `<span class="chip chip-hit">${esc(m.term)}</span>`).join("")
+      : `<span class="chip chip-hit">none yet — paste a JD to see matches</span>`;
+    $("atsMissing").innerHTML = r.missing.length
+      ? r.missing.map((m) => `<span class="chip chip-miss">${esc(m.term)}</span>`).join("")
+      : `<span class="chip chip-hit">nothing missing — clean sweep 🎉</span>`;
+    $("atsSuggestions").innerHTML = r.suggestions.map((s) => `<li>${esc(s)}</li>`).join("");
+    SFX.zap();
+    out.scrollIntoView({ behavior: "smooth", block: "nearest" });
+  } catch (e) { toast(e.message); SFX.trombone(); }
+  finally { btn.disabled = false; btn.innerHTML = "🎯 ATS KEYWORD CHECK — FREE, NO TOKEN"; }
+});
+
 /* ============================== JOB TRACKER ============================== */
 const TRACK_KEY = "ghk_tracker_v1";
 const STAGES = [
@@ -413,14 +485,12 @@ function loadApps() {
   try {
     const raw = localStorage.getItem(TRACK_KEY);
     if (!raw) return [];
-    const data = JSON.parse(raw);
-    if (!Array.isArray(data.apps)) return [];
-    return data.apps.filter((a) => a && a.company && a.role);
+    return GHKTracker.migrateTracker(JSON.parse(raw)).apps;
   } catch { return []; }
 }
 function saveApps() {
   try {
-    localStorage.setItem(TRACK_KEY, JSON.stringify({ version: 1, apps }));
+    localStorage.setItem(TRACK_KEY, JSON.stringify({ version: 2, apps }));
   } catch {
     toast("⚠️ Storage full — export your board as backup!");
   }
@@ -434,19 +504,22 @@ function isOverdue(a) {
 function renderTracker() {
   const kb = $("kanban");
   kb.innerHTML = "";
+  const visible = GHKTracker.filterApps(apps, { query: $("trackerSearch").value, stage: $("trackerStage").value });
   for (const st of STAGES) {
     const col = document.createElement("div");
     col.className = "kcol" + (st.id === "offer" ? " offer" : "");
-    const list = apps.filter((a) => a.stage === st.id);
+    const list = visible.filter((a) => a.stage === st.id);
     col.innerHTML = `<h4>${esc(st.label)} <span class="count">${list.length}</span></h4>`;
     for (const a of list) {
       const card = document.createElement("div");
       card.className = "kcard";
       const od = isOverdue(a);
+      const ghost = GHKTracker.isGhosted(a);
+      const due = GHKTracker.dueStatus(a);
       card.innerHTML = `
-        <div class="kc">${esc(a.company)}</div>
+        <div class="kc">${esc(a.company)}${ghost ? ' <span class="ghost-badge" title="No movement in 14+ days">👻 GHOSTED?</span>' : ""}</div>
         <div class="kr">${esc(a.role)}</div>
-        <div class="kd ${od ? "overdue" : ""}">${a.followUp ? (od ? "⚠️ follow up OVERDUE: " : "📅 follow up: ") + esc(a.followUp) : ""}</div>
+        <div class="kd ${od ? "overdue" : due === "soon" ? "due-soon" : ""}">${a.followUp ? (od ? "⚠️ follow up OVERDUE: " : due === "soon" ? "⏰ follow up SOON: " : "📅 follow up: ") + esc(a.followUp) : ""}</div>
         <div class="kmove">
           <button data-act="back" title="Move back">◀</button>
           <button data-act="edit" title="Edit">✏️</button>
@@ -467,6 +540,8 @@ function renderTracker() {
   $("statResponse").textContent = total ? Math.round((responded / total) * 100) + "%" : "0%";
   $("statInterview").textContent = apps.filter((a) => ["screening", "interview", "offer"].includes(a.stage)).length;
   $("statOffer").textContent = apps.filter((a) => a.stage === "offer").length;
+  $("statGhosted").textContent = apps.filter((a) => GHKTracker.isGhosted(a)).length;
+  $("statDue").textContent = apps.filter((a) => GHKTracker.dueStatus(a) === "overdue" || GHKTracker.dueStatus(a) === "soon").length;
 }
 
 function moveApp(id, dir) {
@@ -475,7 +550,9 @@ function moveApp(id, dir) {
   const order = STAGES.map((s) => s.id);
   const i = order.indexOf(a.stage) + dir;
   if (i < 0 || i >= order.length) return;
+  const from = a.stage;
   a.stage = order[i];
+  GHKTracker.appendHistory(a, "status_change", { from, to: a.stage });
   saveApps(); renderTracker();
   if (a.stage === "offer") { SFX.fanfare(); VFX.confettiBurst(110); toast(`🎉 OFFER from ${a.company}?! LEGENDARY.`); }
   else { SFX.thud(); VFX.shake(); }
@@ -493,6 +570,14 @@ function openAppModal(id) {
   $("mLink").value = a?.link || "";
   $("mNotes").value = a?.notes || "";
   $("btnDeleteApp").classList.toggle("hidden", !a);
+  // Activity history (newest first).
+  const hist = (a?.history || []).slice().reverse();
+  $("appHistory").innerHTML = a ? `<div class="field-label">📜 ACTIVITY HISTORY</div>` + (hist.length
+    ? hist.map((h) => `<div class="history-item"><span>${esc(String(h.at || "").slice(0, 10))}</span><span>${esc(
+        h.type === "status_change" ? `moved ${h.from || "?"} → ${h.to || "?"}`
+        : h.type === "created" ? `created in ${h.to || "?"}`
+        : h.type) }</span></div>`).join("")
+    : `<div class="history-empty">No history yet.</div>`) : "";
   $("appModal").classList.remove("hidden");
   SFX.blip();
 }
@@ -511,8 +596,17 @@ $("btnSaveApp").addEventListener("click", () => {
     stage: $("mStage").value, dateApplied: $("mDate").value,
     followUp: $("mFollowUp").value, link: $("mLink").value.trim().slice(0, 300),
     notes: $("mNotes").value.trim().slice(0, 2000),
+    history: prev?.history || [],
   };
-  if (editingId) Object.assign(prev, rec); else apps.unshift(rec);
+  if (editingId) {
+    Object.assign(prev, rec);
+    if (prevStage && prevStage !== rec.stage) {
+      GHKTracker.appendHistory(prev, "status_change", { from: prevStage, to: rec.stage });
+    }
+  } else {
+    GHKTracker.appendHistory(rec, "created", { to: rec.stage });
+    apps.unshift(rec);
+  }
   saveApps(); renderTracker();
   $("appModal").classList.add("hidden");
   if (rec.stage === "offer" && (wasNew || prevStage !== "offer")) {
@@ -529,7 +623,7 @@ $("btnDeleteApp").addEventListener("click", () => {
 });
 
 $("btnExport").addEventListener("click", () => {
-  const blob = new Blob([JSON.stringify({ app: "get-hired-kit-tracker", version: 1, exportedAt: new Date().toISOString(), applications: apps }, null, 2)], { type: "application/json" });
+  const blob = new Blob([JSON.stringify({ app: "get-hired-kit-tracker", version: 2, exportedAt: new Date().toISOString(), applications: apps }, null, 2)], { type: "application/json" });
   const a = document.createElement("a");
   a.href = URL.createObjectURL(blob);
   a.download = "get-hired-kit-tracker.json";
@@ -544,19 +638,19 @@ $("importFile").addEventListener("change", async (e) => {
   try {
     const data = JSON.parse(await f.text());
     if (data.app !== "get-hired-kit-tracker" || !Array.isArray(data.applications)) throw new Error("bad file");
-    if (!confirm(`Import ${data.applications.length} applications? This replaces your current board.`)) return;
-    apps = data.applications.filter((a) => a && a.company && a.role).slice(0, 2000).map((a, i) => ({
-      id: typeof a.id === "string" ? a.id : `imp-${Date.now()}-${i}`,
-      company: String(a.company).slice(0, 120), role: String(a.role).slice(0, 120),
-      stage: ["applied", "screening", "interview", "offer", "rejected"].includes(a.stage) ? a.stage : "applied",
-      dateApplied: String(a.dateApplied || "").slice(0, 10), followUp: String(a.followUp || "").slice(0, 10),
-      link: String(a.link || "").slice(0, 300), notes: String(a.notes || "").slice(0, 2000),
-    }));
+    const migrated = GHKTracker.migrateTracker({ apps: data.applications });
+    if (!migrated.apps.length && data.applications.length) throw new Error("no valid apps");
+    if (!confirm(`Import ${migrated.apps.length} applications? This replaces your current board.`)) return;
+    apps = migrated.apps.slice(0, 2000);
     saveApps(); renderTracker();
     SFX.chaching(); toast(`⤒ Imported ${apps.length} applications.`);
   } catch { toast("⚠️ That file isn't a valid tracker export."); SFX.trombone(); }
   e.target.value = "";
 });
+
+/* Tracker search / stage filter (re-render only). */
+$("trackerSearch").addEventListener("input", () => renderTracker());
+$("trackerStage").addEventListener("change", () => renderTracker());
 
 /* ============================== boot ============================== */
 (async function boot() {
@@ -564,6 +658,7 @@ $("importFile").addEventListener("change", async (e) => {
   VFX.start();
   apps = loadApps();
   renderTracker();
+  renderDojoHistory();
   try {
     const h = await api("/api/health");
     const g = $("proGumroadLink");

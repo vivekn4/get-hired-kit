@@ -92,3 +92,15 @@ Browser (static frontend, zero build) → Express backend (Node 20) → Gemini A
 - **Pro upsell:** when free quota hits 0, modal: "Out of training tokens — go Pro ($29, one-time, unlimited)" + key input + link to Gumroad product. Dismissible, tracker never gated.
 
 **Simplicity rules:** plain labels ("Start sparring", not "Initialize interview session"); every AI action shows what it costs (token count visible); destructive actions (delete application) confirm first.
+
+## 6. v1.1 upgrades (2026-10-14 — teardown-inspired, original code only)
+
+Mechanisms learned from studying open-source comparators (OpenResume, Jobify, Prepped) and re-implemented from scratch — see QC_NOTES.md for sources + hashes. No copied code, strings, or assets.
+
+1. **ATS Keyword Check** — `lib/ats.js` (pure, tested): JD term extraction (unigrams + within-clause bigrams, frequency-weighted), resume matching (token-set for unigrams, consecutive-token for bigrams), section detection, quantified-bullet metrics, weighted score (55% coverage / 20% sections / 15% bullets / 10% length). `POST /api/ats`, free, no token, rate-limited.
+2. **Dojo difficulty** — `DIFFICULTY_PRESETS` (chill/standard/beast) in `lib/prompts.js`: question style + AI scoring strictness + fallback base/cap. Validated via `normalizeDifficulty`, stored on the session.
+3. **Rubric dimensions** — `RUBRIC_DIMENSIONS` + `fallbackRubric()` (structure/example/metrics/relevance/punch, weights sum to 1). AI prompt asks for dimensions JSON; server validates all five 0–100 or recomputes offline. Frontend renders `dimBarsHTML()` per answer + per report round.
+4. **Tracker v2** — `public/js/tracker_logic.js` (pure, tested in node via vm): `migrateTracker` (v1→v2, seeds `created` history), `appendHistory` (cap 50), `isGhosted` (14-day derived flag), `dueStatus` (overdue/soon≤3d/ok/none), `filterApps`, `streakDays`. Storage key stays `ghk_tracker_v1`; payload version is 2.
+5. **Dojo history + streak** — `ghk_dojo_history_v1` in localStorage (last 50 bouts), streak = consecutive days ending today-or-yesterday.
+
+Risks / mitigations: ATS bigrams across list commas looked like junk ("service cash") → bigrams split on `[.!?\n;,:]`; AI dimension JSON may be off-format → validate + offline recompute; tracker v1 import without history → migration seeds it; ghosted is derived, never persisted as a stage, so old exports still load.
