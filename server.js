@@ -33,9 +33,13 @@ import {
   FALLBACK_QUESTIONS,
   FALLBACK_ROAST_LINES,
   fallbackScore,
+  fallbackRubric,
+  normalizeDifficulty,
+  RUBRIC_DIMENSIONS,
   beltFor,
   LIMITS,
 } from "./lib/prompts.js";
+import { analyzeAts } from "./lib/ats.js";
 import { verifyKey, signProCookie, isProCookie } from "./lib/license.js";
 import { Quota } from "./lib/quota.js";
 import { escapeHtml, validText, clip } from "./lib/util.js";
@@ -200,6 +204,7 @@ async function nextQuestion(session) {
     jobDescription: session.jd,
     role: session.role,
     askedSoFar: session.asked,
+    difficulty: session.difficulty,
   });
   try {
     const question = await chatComplete({ system, user, maxTokens: 120 });
@@ -211,25 +216,37 @@ async function nextQuestion(session) {
   }
 }
 
-/** Score an answer via AI (or dummy). Always returns a score object. */
-async function scoreAnswer({ question, answer, jd }) {
-  if (!aiConfigured()) return { ...fallbackScore(answer), dummy: true };
-  const { system, user } = interviewScorePrompt({ question, answer, jobDescription: jd });
+/** Score an answer via AI (or dummy). Always returns a score object with dimensions. */
+async function scoreAnswer({ question, answer, jd, difficulty = "standard" }) {
+  if (!aiConfigured()) return { ...fallbackScore(answer, { jobDescription: jd, difficulty }), dummy: true };
+  const { system, user } = interviewScorePrompt({ question, answer, jobDescription: jd, difficulty });
   try {
-    const raw = await chatComplete({ system, user, maxTokens: 400 });
+    const raw = await chatComplete({ system, user, maxTokens: 500 });
     const parsed = extractJson(raw);
     if (parsed && typeof parsed.score === "number") {
+      // Validate AI dimensions; recompute offline if any are missing/invalid.
+      let dimensions = parsed.dimensions;
+      const validDims = dimensions && typeof dimensions === "object"
+        && RUBRIC_DIMENSIONS.every((d) => typeof dimensions[d.id] === "number"
+          && dimensions[d.id] >= 0 && dimensions[d.id] <= 100);
+      if (!validDims) dimensions = fallbackRubric(answer, jd).dimensions;
+      else {
+        dimensions = Object.fromEntries(
+          RUBRIC_DIMENSIONS.map((d) => [d.id, Math.max(0, Math.min(100, Math.round(dimensions[d.id])))])
+        );
+      }
       return {
         score: Math.max(0, Math.min(100, Math.round(parsed.score))),
         feedback: clip(String(parsed.feedback || "No feedback."), 600),
         strength: clip(String(parsed.strength || "—"), 200),
         fix: clip(String(parsed.fix || "—"), 200),
+        dimensions,
         dummy: false,
       };
     }
     throw new Error("off-format");
   } catch {
-    return { ...fallbackScore(answer), dummy: true };
+    return { ...fallbackScore(answer, { jobDescription: jd, difficulty }), dummy: true };
   }
 }
 
@@ -256,11 +273,13 @@ app.post("/api/interview/start", aiLimiter, quotaCheck, async (req, res) => {
   const jd = validText(req.body?.jobDescription, { min: 20, max: LIMITS.jobDescription, label: "Job description" });
   if (!jd.ok) return res.status(400).json({ error: jd.error });
   const role = clip(req.body?.role || "", 120).trim();
+  const difficulty = normalizeDifficulty(req.body?.difficulty);
 
   const session = {
     id: newSessionId(),
     jd: jd.value,
     role,
+    difficulty,
     round: 0,
     asked: [],
     qa: [],
@@ -299,7 +318,7 @@ app.post("/api/interview/answer", aiLimiter, async (req, res) => {
   session.scoring = true;
   try {
   const question = session.asked[session.asked.length - 1];
-  const scored = await scoreAnswer({ question, answer: a.value, jd: session.jd });
+  const scored = await scoreAnswer({ question, answer: a.value, jd: session.jd, difficulty: session.difficulty });
   session.qa.push({ question, answer: a.value, ...scored });
   session.updatedAt = Date.now();
 
@@ -315,16 +334,19 @@ app.post("/api/interview/answer", aiLimiter, async (req, res) => {
       feedback: scored.feedback,
       strength: scored.strength,
       fix: scored.fix,
+      dimensions: scored.dimensions,
       dummy: scored.dummy,
       report: {
         average: avg,
         belt: belt.belt,
+        difficulty: session.difficulty,
         rounds: session.qa.map((x) => ({
           question: x.question,
           score: x.score,
           feedback: x.feedback,
           strength: x.strength,
           fix: x.fix,
+          dimensions: x.dimensions || null,
         })),
       },
     });
@@ -341,6 +363,7 @@ app.post("/api/interview/answer", aiLimiter, async (req, res) => {
     feedback: scored.feedback,
     strength: scored.strength,
     fix: scored.fix,
+    dimensions: scored.dimensions,
     dummy: scored.dummy,
     round: session.round,
     totalRounds: ROUNDS,
@@ -416,6 +439,17 @@ app.post("/api/rewrite", aiLimiter, quotaCheck, async (req, res) => {
     log("warn", "rewrite_fallback", { code: err?.code });
     res.status(502).json({ error: friendlyAiError(err).message || "Rewrite failed — try again in a minute." });
   }
+});
+
+/* ATS Keyword Gap Check — deterministic, zero-AI, always free (no tokens). */
+
+app.post("/api/ats", aiLimiter, async (req, res) => {
+  const r = validText(req.body?.resume, { min: 50, max: LIMITS.resume, label: "Resume" });
+  if (!r.ok) return res.status(400).json({ error: r.error });
+  const jdRaw = typeof req.body?.jobDescription === "string" ? req.body.jobDescription.trim() : "";
+  const jd = jdRaw ? clip(jdRaw, LIMITS.jobDescription) : "";
+  log("info", "ats", { withJd: Boolean(jd) });
+  res.json({ ...analyzeAts(r.value, jd), dummy: false, free: true });
 });
 
 /* License / Pro */
